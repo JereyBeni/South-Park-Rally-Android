@@ -1,0 +1,18 @@
+# Assets del juego original (copyright): nunca subir
+game_assets/
+assets_extracted/
+report.json
+
+# Build
+build/
+.cxx/
+.gradle/
+android/local.properties
+android/**/build/
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.vscode/
