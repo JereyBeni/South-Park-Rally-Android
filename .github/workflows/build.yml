@@ -24,6 +24,13 @@ jobs:
           cmake --build build
           ctest --test-dir build --output-on-failure
 
+      - name: Tests del inspector (Python)
+        working-directory: viewer
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q numpy pillow pytest
+          "$RUNNER_TEMP/venv/bin/python" -m pytest -q
+
       - name: Extraer y analizar el zip del juego (opcional)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.assets_zip_url != '' }}
         env:

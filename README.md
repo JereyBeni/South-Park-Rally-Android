@@ -51,6 +51,24 @@ El VFS descarta automáticamente una única carpeta contenedora (por ejemplo `So
 - **desktop:** compila y corre los tests del VFS. Al lanzarlo a mano (*Run workflow*) acepta `assets_zip_url`: la URL de tu copia del juego en .zip. Se descarga en el runner, se extrae con `extract_zip.py` y se analiza con `scan_assets.py`. No se publica ni se empaqueta.
 - **android:** compila el APK debug y lo sube como artefacto `sprally-debug-apk` (sin assets).
 
+## Inspector y visor de RBH/VRAM (PC)
+
+`viewer/` contiene un inspector en Python para estudiar `cartman.rbh/.vram` (jeep) y
+`cartman_anim.rbh/.vram` (personaje). Estado honesto: **inspector, reportes y vista previa
+experimental de texturas; todavía sin decodificador de geometría** (ver `docs/RBH_NOTES.md`).
+
+```
+cd viewer
+pip install -r requirements.txt
+python -m spr_viewer gui                       # interfaz gráfica
+python -m spr_viewer report cartman.rbh --json cartman.rbh.json
+python -m spr_viewer hexdump cartman.rbh --offset 0 --length 256
+python -m spr_viewer vram cartman.vram --width 256 --height 256 --format rgb565 --out prueba.png
+pytest                                         # tests
+```
+
+Los archivos del juego se abren siempre en modo solo lectura.
+
 ## Hoja de ruta
 
 - [ ] Identificar contenedores y formatos (`tools/scan_assets.py`)
