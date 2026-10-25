@@ -10,7 +10,9 @@
 namespace vfs {
 
 // Escanea `root` recursivamente. Devuelve false si no es una carpeta.
-bool mount(const std::string& root);
+// Con `strip_wrapper`, si todo el contenido cuelga de una única carpeta
+// (típico de un .zip: "SouthParkRally/..."), esa carpeta se descarta.
+bool mount(const std::string& root, bool strip_wrapper = true);
 
 // Cantidad de archivos indexados.
 size_t count();

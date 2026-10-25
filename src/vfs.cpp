@@ -9,7 +9,33 @@ namespace fs = std::filesystem;
 
 namespace {
 std::unordered_map<std::string, std::string> g_files;  // ruta normalizada -> ruta real
+
+// Mientras todos los archivos cuelguen de la misma carpeta de primer nivel, se la quita.
+void strip_wrapper_dirs() {
+    for (;;) {
+        std::string prefix;
+        bool same = !g_files.empty();
+        for (const auto& kv : g_files) {
+            size_t slash = kv.first.find('/');
+            if (slash == std::string::npos) {
+                same = false;
+                break;
+            }
+            std::string first = kv.first.substr(0, slash + 1);
+            if (prefix.empty()) {
+                prefix = first;
+            } else if (first != prefix) {
+                same = false;
+                break;
+            }
+        }
+        if (!same) return;
+        std::unordered_map<std::string, std::string> stripped;
+        for (const auto& kv : g_files) stripped[kv.first.substr(prefix.size())] = kv.second;
+        g_files.swap(stripped);
+    }
 }
+}  // namespace
 
 namespace vfs {
 
@@ -22,12 +48,11 @@ std::string normalize(const std::string& path) {
         if (c == '/' && (out.empty() || out.back() == '/')) continue;  // barras repetidas / inicial
         out.push_back(c);
     }
-    // Quitar "./" iniciales (también tras normalizar "./x" -> "./x").
     while (out.size() >= 2 && out[0] == '.' && out[1] == '/') out.erase(0, 2);
     return out;
 }
 
-bool mount(const std::string& root) {
+bool mount(const std::string& root, bool strip_wrapper) {
     g_files.clear();
     std::error_code ec;
     if (!fs::is_directory(root, ec)) return false;
@@ -40,6 +65,7 @@ bool mount(const std::string& root) {
         if (ec2) continue;
         g_files[normalize(rel)] = it->path().string();
     }
+    if (strip_wrapper) strip_wrapper_dirs();
     return true;
 }
 

@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      assets_zip_url:
+        description: "URL de TU copia del juego en .zip (opcional). Solo se extrae y analiza en el runner: no se empaqueta en el APK ni se sube como artefacto."
+        required: false
+        type: string
+
+jobs:
+  desktop:
+    name: Tests de escritorio
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar y probar el VFS
+        run: |
+          cmake -B build
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      - name: Extraer y analizar el zip del juego (opcional)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.assets_zip_url != '' }}
+        env:
+          ASSETS_ZIP_URL: ${{ inputs.assets_zip_url }}
+        run: |
+          curl -fL --retry 3 -o "$RUNNER_TEMP/game.zip" "$ASSETS_ZIP_URL"
+          python3 tools/extract_zip.py "$RUNNER_TEMP/game.zip" "$RUNNER_TEMP/game"
+          python3 tools/scan_assets.py "$RUNNER_TEMP/game"
+
+  android:
+    name: APK debug
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar plataforma, NDK y CMake
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Compilar APK
+        working-directory: android
+        run: gradle assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sprally-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

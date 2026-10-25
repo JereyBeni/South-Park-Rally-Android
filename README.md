@@ -1,46 +1,55 @@
 # South Park Rally – port nativo a Android
 
 Port del South Park Rally de PC (1999) a Android con NDK + SDL2 + OpenGL ES 2.
-**Este repo no incluye ningún asset del juego**: cada usuario importa los de su copia original.
+**Este repo no incluye ningún asset del juego ni enlaces para descargarlo**: cada usuario importa su propia copia.
 
 ## Estructura
 
 ```
 src/            Código del motor (portable: corre en PC y en Android)
-  vfs.h/.cpp    Sistema de archivos virtual (ignora mayúsculas y "\" vs "/")
+  vfs.h/.cpp    Sistema de archivos virtual (ignora mayúsculas, "\" vs "/" y carpeta contenedora)
   main.cpp      Ventana SDL2 + contexto GLES2 + montaje de assets
 tests/          Tests del VFS
-tools/          scan_assets.py: identifica formatos de la carpeta del juego
+tools/          scan_assets.py (identifica formatos) y extract_zip.py (extracción segura)
 docs/           FORMATS.md: notas de ingeniería inversa de formatos
 android/        Proyecto Gradle (ImportActivity + GameActivity + CMake)
-third_party/    SDL2 (submódulo, ver abajo)
+third_party/    SDL2 (submódulo fijado en release-2.30.11)
+.github/        CI: tests de escritorio + APK debug
 ```
 
 ## Primeros pasos
 
-1. Traer SDL2:
-   ```
-   git submodule add -b SDL2 https://github.com/libsdl-org/SDL third_party/SDL2
-   ```
-2. Analizar los assets en tu PC (antes de tocar Android):
-   ```
-   python3 tools/scan_assets.py "C:\Juegos\SouthParkRally" --json report.json
-   ```
-   Anotá los resultados en `docs/FORMATS.md`.
-3. Desarrollar en PC (más rápido de iterar):
-   ```
-   cmake -B build && cmake --build build
-   ./build/sprally /ruta/a/la/carpeta/del/juego
-   ```
-4. Compilar para Android: abrí la carpeta `android/` en Android Studio (instala NDK y CMake desde el SDK Manager) y ejecutá en el dispositivo.
+```
+git clone --recurse-submodules <url-de-tu-repo>
+# si ya lo clonaste sin submódulos:
+git submodule update --init
+```
 
-## Cómo se importan los assets en Android
+1. **Extraer y analizar tu copia del juego en la PC**
+   ```
+   python3 tools/extract_zip.py juego.zip game_assets
+   python3 tools/scan_assets.py game_assets --json report.json
+   ```
+   Anotá lo que veas en `docs/FORMATS.md`. Si el zip trae instaladores o imágenes de disco (`.iso`, `.cab`, `setup.exe`), `extract_zip.py` te avisa: hay que instalar o extraer eso primero y usar la carpeta resultante.
+2. **Desarrollar en PC** (más rápido de iterar):
+   ```
+   cmake -B build && cmake --build build && ctest --test-dir build
+   ./build/sprally game_assets
+   ```
+3. **Android:** abrí `android/` en Android Studio (instala NDK 26 y CMake 3.22 desde el SDK Manager) y ejecutá en el dispositivo.
 
-Al abrir la app por primera vez, `ImportActivity` pide elegir la carpeta del juego (selector de carpetas del sistema) y la copia a `files/game_assets` dentro de la app. Después arranca `GameActivity` (SDL). Para reimportar, borrá los datos de la app.
+## Importar los assets en Android
 
-## Por qué el VFS ignora mayúsculas
+La primera vez, `ImportActivity` ofrece dos opciones: **elegir el .zip** (se extrae dentro de la app, con protección contra rutas maliciosas) o **elegir la carpeta** ya extraída. Los archivos quedan en `files/game_assets`. Para reimportar, borrá los datos de la app.
 
-Windows no distingue `Car01.TGA` de `car01.tga` y Android sí. El juego original probablemente mezcla ambos y usa `\` como separador. `vfs::normalize` unifica todo en minúsculas con `/`, así que el resto del código puede pedir rutas tal como aparecen en el ejecutable original.
+El VFS descarta automáticamente una única carpeta contenedora (por ejemplo `SouthParkRally/…` dentro del zip), así que el resto del código ve las rutas relativas a la raíz del juego.
+
+## GitHub Actions
+
+`.github/workflows/build.yml` tiene dos trabajos:
+
+- **desktop:** compila y corre los tests del VFS. Al lanzarlo a mano (*Run workflow*) acepta `assets_zip_url`: la URL de tu copia del juego en .zip. Se descarga en el runner, se extrae con `extract_zip.py` y se analiza con `scan_assets.py`. No se publica ni se empaqueta.
+- **android:** compila el APK debug y lo sube como artefacto `sprally-debug-apk` (sin assets).
 
 ## Hoja de ruta
 
@@ -53,4 +62,4 @@ Windows no distingue `Car01.TGA` de `car01.tga` y Android sí. El juego original
 
 ## Legal
 
-El código de este repo es propio. El juego y sus assets pertenecen a sus titulares originales y no se distribuyen aquí.
+El código de este repo es propio. El juego y sus assets pertenecen a sus titulares originales: no se incluyen, no se enlazan y no se redistribuyen (ni en el APK ni como artefactos de CI).
