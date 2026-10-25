@@ -46,10 +46,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
-
+      # La imagen ubuntu-24.04 ya trae el Android SDK (ANDROID_HOME) y sdkmanager.
       - name: Instalar plataforma, NDK y CMake
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
 
       - uses: gradle/actions/setup-gradle@v4
         with:
