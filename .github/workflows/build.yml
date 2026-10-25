@@ -14,7 +14,7 @@ on:
 jobs:
   desktop:
     name: Tests de escritorio
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -35,13 +35,13 @@ jobs:
 
   android:
     name: APK debug
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
